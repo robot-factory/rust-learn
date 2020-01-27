@@ -44,17 +44,17 @@ impl Drop for List {
   }
 }
 
-// #[cfg(test)]
-// mod test {
-//   use super::*;
-//   #[test]
-//   fn basics() {
-//       let mut list = List::new();
-//       assert_eq!(list.pop(), None);
+#[cfg(test)]
+mod test {
+  use super::*;
+  #[test]
+  fn basics() {
+      let mut list = List::new();
+      assert_eq!(list.pop(), None);
 
-//       list.push(1);
-//       list.push(2);
-//       assert_eq!(list.pop(),Some(2));
-//       assert_eq!(list.pop(),Some(1));
-//   }
-// }
+      list.push(1);
+      list.push(2);
+      assert_eq!(list.pop(),Some(2));
+      assert_eq!(list.pop(),Some(1));
+  }
+}
