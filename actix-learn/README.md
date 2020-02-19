@@ -38,7 +38,11 @@ async fn main() -> std::io::Result<()> {
 2. 通过App创建应用；
 3. 基础的相应函数返回一个 `impl Responder` ， 最简单的创建方式是直接返回字符串， 可操作性大一点的是`HttpResponse::Ok().body("Hello world!")`
 4. 配置路由的方式有两种，集中式和分散式，集中式是通过App实例的route函数，分布式是利用宏， 通过service函数来载入服务；
-5. `#[actix_rt::main]`就是是并发的简写，目前还不确定，资料太少。
+5. `#[actix_rt::main]`是一个宏，用于将异步函数调入`actix_rt::System`进行执行
+
+## 路由匹配
+1. `App.new().route("/path", web::get().to(index))`
+2. #[get("/main")]
 
 ## 路由划分
 一般来讲一个后台程序都有很多功能模块，编写程序的时候相同的模块一般有同样开头的路由，并且复用一部分功能，因此路由划分是一个常见的需求。
@@ -81,3 +85,118 @@ async fn main() -> std::io::Result<()> {
 1. web::scope 生成的是一个service；
 2. web::scope 能导入已有的service；
 3. 这里的service比较偏向 controller 的概念；
+
+然而这样用于分离模块还是不够方便，需要更近一步。actix-web将路由配置以类似参数的形式导入
+示例 -> config_scope
+```rust 
+use actix_web::{HttpServer, App, web, HttpResponse};
+
+fn scope_config(cfg: &mut web::ServiceConfig) {
+    cfg
+        .service(
+            web::resource("/scope")
+                .route(web::get().to(|| HttpResponse::Ok().body("/scope")))
+                // .route("/a", web::get().to(|| HttpResponse::Ok().body("/a")))
+        )
+        .service(
+            web::scope("/scope2")
+                .route("", web::get().to(|| HttpResponse::Ok().body("/scope2")))
+        );
+}
+
+fn config(cfg: &mut web::ServiceConfig) {
+    cfg.service(
+        web::resource("/api")
+            .route(web::get().to(|| HttpResponse::Ok().body("/api")))
+    );
+}
+
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .configure(config)
+            .service(web::scope("/v1").configure(scope_config))
+    })
+    .bind("127.0.0.1:8084")?
+    .run()
+    .await
+}
+```
+
+## 应用共享状态
+有时候我们需要再不同的`controller`之间共享状态， actix-web也同样提供了方案。
+实例　－>　state_share
+```rust
+use std::sync::Mutex;
+
+struct AppState {
+    app_name: String,
+    counter: Mutex<i32>,
+}
+
+async fn index(data: web::Data<AppState>) -> impl Responder {
+    let app_name = &data.app_name;
+    let mut counter = data.counter.lock().unwrap();
+    *counter +=1;
+    format!("hello {} visited {}", app_name, counter)
+}
+```
+共享状态的数据直接注入响应的函数，之后最好详细了解下`Mutex`的使用方法。
+
+注册共享数据有两种方式：
+```rust
+
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .data(AppState {app_name: String::from("Actix-web"), counter: Mutex::new(0)})
+            .route("/", web::get().to(index))
+    })
+    .bind("127.0.0.1:8083")?
+    .run()
+    .await
+}
+
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    let app_data = AppState {app_name: String::from("Actix-web"), counter: Mutex::new(0)};
+    let app_data = web::Data::new(app_data);
+    HttpServer::new(move || {
+        App::new()
+            .app_data(app_data.clone())
+            .route("/", web::get().to(index))
+    })
+    .bind("127.0.0.1:8083")?
+    .run()
+    .await
+}
+```
+
+两者的测试结果是相同的， 后一种主要用于已有数据的导入， 虽然看起来好像比较麻烦，但实际应该比较方便使用。
+
+## guard守卫
+Guard用于对某个路由的访问添加限制，可以是一个返回值为布尔类型的函数。
+```rust
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    HttpServer::new(|| {
+        App::new()
+            .service(
+                web::scope("/")
+                    .guard(guard::Header("Host", "www.rust-lang.org"))
+                    .route("", web::to(|| HttpResponse::Ok().body("www"))),
+            )
+            .service(
+                web::scope("/")
+                    .guard(guard::Header("Host", "users.rust-lang.org"))
+                    .route("", web::to(|| HttpResponse::Ok().body("user"))),
+            )
+            .route("/", web::to(|| HttpResponse::Ok()))
+    })
+    .bind("127.0.0.1:8088")?
+    .run()
+    .await
+}
+```
