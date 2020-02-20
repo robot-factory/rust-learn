@@ -40,6 +40,9 @@ async fn main() -> std::io::Result<()> {
 4. 配置路由的方式有两种，集中式和分散式，集中式是通过App实例的route函数，分布式是利用宏， 通过service函数来载入服务；
 5. `#[actix_rt::main]`是一个宏，用于将异步函数调入`actix_rt::System`进行执行
 
+## Handler
+我现在有个疑问，actix是如何控制handler函数的入参的？编写的函数输入参数并没有限制，比如express的handler就限制入参是req，res，next三个，但actix完全没有规范，而且还有共享数据，那它分配请求时是怎么调用handler函数的？
+
 ## 路由匹配
 1. `App.new().route("/path", web::get().to(index))`
 2. #[get("/main")]
