@@ -210,7 +210,81 @@ async fn main() -> std::io::Result<()> {
 
 ### 优雅的暂停、重启、关机
 
+```rust
+#[actix_rt::main]
+async fn main() {
+    let (tx, rx) = mpsc::channel();
+
+    let handler = thread::spawn(move || -> std::io::Result<()> {
+        let sys = System::new("http-server");
+
+        let srv = HttpServer::new(|| {
+            App::new().route("/", web::get().to(|| HttpResponse::Ok().body("/")))
+        })
+        .bind("localhost:8087")?
+        .shutdown_timeout(60)
+        .run();
+
+        let _ = tx.send(srv);
+        sys.run()
+    });
+
+    let srv = rx.recv().unwrap();
+
+    srv.pause().await;
+
+    srv.resume().await;
+
+    // srv.stop(true).await;
+
+    handler.join().unwrap();
+}
+```
+
+```rust
+#[get("/")]
+async fn index() -> impl Responder {
+    "Hello"
+}
+
+#[get("/stop")]
+async fn stop(stopper: web::Data<mpsc::Sender<()>>) -> impl Responder {
+    stopper.send(()).unwrap();
+    "stop"
+}
+
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+
+    let (tx,rx) = mpsc::channel::<()>();
+
+    let server = HttpServer::new(move || {
+        App::new()
+            .data(tx.clone())
+            .service(index)
+            .service(stop)
+    })
+    .bind("localhost:8086")?
+    .run();
+
+    let srv = server.clone();
+
+    thread::spawn(move || {
+        rx.recv().unwrap();
+
+        executor::block_on(srv.stop(true));
+    });
+
+    server.await
+}
+```
+server管理的主要方式就是通过 mpsc::channel 获得server对象，在外部进行操作。
+需要注意的是：
+1. 启动多线程时要记得阻塞。
+
+
 ### 如何启动多个服务器
+需要通过thread::spawn启动线程来启动不同的服务
 
 ### 多线程操作
 
