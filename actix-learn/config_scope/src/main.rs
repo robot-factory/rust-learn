@@ -14,10 +14,15 @@ fn scope_config(cfg: &mut web::ServiceConfig) {
 }
 
 fn config(cfg: &mut web::ServiceConfig) {
-    cfg.service(
-        web::resource("/api")
-            .route(web::get().to(|| HttpResponse::Ok().body("/api")))
-    );
+    cfg
+        .service(
+            web::resource("/api")
+                .route(web::get().to(|| HttpResponse::Ok().body("/api")))
+        )
+        .service(
+            web::resource("/*")
+                .route(web::get().to(|| HttpResponse::Ok().body("/****")))
+        );
 }
 
 #[actix_rt::main]

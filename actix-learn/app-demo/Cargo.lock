@@ -298,9 +298,12 @@ version = "0.1.0"
 dependencies = [
  "actix-files",
  "actix-rt",
+ "actix-server",
+ "actix-service",
  "actix-web",
  "env_logger",
  "futures",
+ "log",
 ]
 
 [[package]]

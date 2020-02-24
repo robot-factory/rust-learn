@@ -292,3 +292,31 @@ server管理的主要方式就是通过 mpsc::channel 获得server对象，在�
 
 ## 中间件
 中间件是一个很重要的概念
+
+## 前端文件部署
+一般可以用nginx来部署静态文件，但为了提高集成度方便部署和升级，使用服务器也是很好的选择。
+
+最简单的方式是利用default_service将未成功匹配的路由导向默认前端目录，不好之处在于如果别的路径没做好错误处理，那也会导向default_service
+```rust
+async fn frontend_index() -> Result<fs::NamedFile> {
+    Ok(actix_files::NamedFile::open("./webapp/build/index.html")?)
+}
+
+#[actix_rt::main]
+async fn main() -> std::io::Result<()> {
+    std::env::set_var("RUST_LOG", "actix_web=info");
+    env_logger::init();
+
+    HttpServer::new(|| {
+        App::new()
+            .wrap(middleware::Logger::default())
+            .service(fs::Files::new("/", "./webapp/build/").index_file("index.html"))
+            .default_service(web::resource("/*").route(web::get().to(frontend_index)))
+    })
+        .bind("localhost:8090")?
+        .run()
+        .await
+}
+```
+
+最好的方法是直接利用actix_files的default_handler。
