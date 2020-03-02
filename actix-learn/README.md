@@ -43,6 +43,12 @@ async fn main() -> std::io::Result<()> {
 ## Handler
 我现在有个疑问，actix是如何控制handler函数的入参的？编写的函数输入参数并没有限制，比如express的handler就限制入参是req，res，next三个，但actix完全没有规范，而且还有共享数据，那它分配请求时是怎么调用handler函数的？
 
+是通过定义一个类型的 trait FromRequest 实现的
+
+## JSON解析
+web::JSON<MyObj>
+用postman进行测试，测试了好几次都不想，而直接使用body进行解析则没有问题，然后又用js发请求测试发现可以，最后发现原因在 Content-Type 是否为application/json上
+
 ## 路由匹配
 1. `App.new().route("/path", web::get().to(index))`
 2. #[get("/main")]

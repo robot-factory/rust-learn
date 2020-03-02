@@ -2,11 +2,11 @@ use actix_web::{web, HttpServer, App, middleware,HttpResponse, HttpRequest, Resu
 use actix_files as fs;
 
 mod app;
-mod load_front_files;
+mod modules;
 
 #[actix_rt::main]
 async fn main() -> std::io::Result<()> {
-    std::env::set_var("RUST_LOG", "actix_web=info");
+    std::env::set_var("RUST_LOG", "actix_web=debug");
     env_logger::init();
 
     let server = app::new_server();

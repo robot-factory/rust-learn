@@ -17,3 +17,33 @@
    4. mysql
 4. 后台管理
 5. 错误处理
+
+# 依赖
+## sqllite
+### Install SQLite
+
+```sh
+# on OpenSUSE
+sudo zypper install sqlite3-devel libsqlite3-0 sqlite3
+
+# on Ubuntu
+sudo apt-get install libsqlite3-dev sqlite3
+
+# on Fedora
+sudo dnf install libsqlite3x-devel sqlite3x
+
+# on macOS (using homebrew)
+brew install sqlite3
+```
+
+### Initialize SQLite Database
+
+```sh
+cd examples/diesel
+cargo install diesel_cli --no-default-features --features sqlite
+
+echo "DATABASE_URL=test.db" > .env
+diesel migration run
+```
+
+There will now be a database file at `./test.db`.
