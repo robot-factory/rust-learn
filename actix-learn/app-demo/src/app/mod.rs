@@ -1,8 +1,9 @@
-use actix_web::{web, HttpServer, App, middleware, HttpResponse, HttpRequest, Responder, Result};
+use actix_web::{web, HttpServer, App, middleware, HttpResponse, HttpRequest, Responder, Result, error};
 use actix_files as fs;
 use actix_server::Server;
+use actix_web::FromRequest;
 
-use serde_derive::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 use rocksdb::{DB, Options};
 
 use crate::modules::load_front_files;
@@ -35,7 +36,10 @@ pub fn new_server() -> Server {
                 web::scope("/api/v1")
                     .service(web::resource("put/{key}/{value}")
                         .route(web::get().to(put)))
-                    .service(web::resource("echo").route(web::post().to(json_handler))))
+                    .service(web::resource("echo")
+                        .app_data(web::Json::<MyObj>::configure(|cfg| {
+                        cfg.limit(4096).content_type(|_| true).into()
+                    })).route(web::post().to(json_handler))))
             .configure(load_front_files::start)
 
     })
