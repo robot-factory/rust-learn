@@ -1,4 +1,3 @@
-workspace = { members = ["concurrency"] }
 [package]
 name = "hello_tokio"
 version = "0.1.0"
